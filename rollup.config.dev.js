@@ -7,7 +7,7 @@ import json from '@rollup/plugin-json';
 export default {
   input: ['src/main.ts'],
   output: {
-    file: './dist/mini-media-player-bundle.js',
+    file: './dist/lyfes-media-player-bundle.js',
     format: 'es',
     inlineDynamicImports: true,
   },

@@ -1,6 +1,9 @@
-import Vibrant from 'node-vibrant/dist/vibrant.js';
+import Vibrant from '@vibrant/vibrant';
+import fetch from 'node-fetch';
 
-import { CONTRAST_RATIO, COLOR_SIMILARITY_THRESHOLD } from '../const';
+// Recreate the color generator logic here for testing
+const CONTRAST_RATIO = 4.5;
+const COLOR_SIMILARITY_THRESHOLD = 150;
 
 const luminance = (r, g, b) => {
   const a = [r, g, b].map((v) => {
@@ -37,7 +40,7 @@ const colorGenerator = (colors) => {
     let bestFgColor = dominantColor;
     let bestContrast = 0;
 
-    // If we only have one color, create variations of it
+    // If we only have one color, create variations
     if (colors.length === 1) {
       const variations = [
         // Darker version
@@ -97,5 +100,44 @@ const colorGenerator = (colors) => {
   ];
 };
 
-Vibrant._pipeline.generator.register('default', colorGenerator);
-export default async (picture) => new Vibrant(picture, { colorCount: 16 }).getPalette();
+const testImage = async () => {
+  const imageUrl = 'https://upload.wikimedia.org/wikipedia/commons/5/51/KBTV-TV_Fox_4_logo.png';
+  
+  try {
+    const response = await fetch(imageUrl);
+    const buffer = await response.arrayBuffer();
+    
+    const vibrant = new Vibrant(Buffer.from(buffer));
+    const palette = await vibrant.getPalette();
+    
+    console.log('Extracted colors:');
+    Object.entries(palette).forEach(([name, swatch]) => {
+      if (swatch) {
+        console.log(`${name}:`, {
+          rgb: swatch.rgb,
+          population: swatch.population,
+          hex: swatch.hex
+        });
+      }
+    });
+
+    // Get colors using our generator
+    const colors = Object.values(palette).filter(Boolean);
+    const [fgColor, bgColor] = colorGenerator(colors);
+    
+    console.log('\nGenerated colors:');
+    console.log('Foreground:', fgColor);
+    console.log('Background:', bgColor);
+    
+    // Print contrast ratio
+    const fgRgb = colors.find(c => c.hex === fgColor)?.rgb;
+    const bgRgb = colors.find(c => c.hex === bgColor)?.rgb;
+    if (fgRgb && bgRgb) {
+      console.log('Contrast ratio:', getContrastRatio(fgRgb, bgRgb));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+};
+
+testImage();

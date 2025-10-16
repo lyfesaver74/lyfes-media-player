@@ -107,11 +107,35 @@ export interface MediaPlayerEntityAttributes extends HassEntityAttributeBase {
   media_episode?: any;
   app_name?: string;
   media_position_updated_at?: string | number | Date;
+  user_img?: string;
+  // Custom/extended attributes
+  custom_name?: string;
+  // Channel-related (tvchannel)
+  channel_number?: string | number;
+  channel_name?: string;
+  program_series?: string;
+  // Stream details
+  video_codec?: string;
+  video_height?: number;
+  video_width?: number;
+  video_resolution?: string; // e.g., 1920x1080
+  video_framerate?: number;
+  media_resolution?: string; // e.g., 1080p, 4K
+  video_fps?: number;
+  frame_rate?: number | string;
+  audio_codec?: string; // e.g., AAC, EAC3, DTS
+  audio_profile?: string; // e.g., Atmos
+  audio_channels?: number | string; // e.g., 2.0, 5.1, 6 channels
+  is_transcoding?: boolean;
+  transcoding?: boolean;
+  play_method?: string; // e.g., DirectPlay, DirectStream, Transcode
+  playback_method?: string; // e.g., direct, transcoding (Emby)
   media_duration?: number;
   media_position?: number;
   media_title?: string;
   icon?: string;
   entity_picture_local?: string;
+  program_image_url?: string;
   is_volume_muted?: boolean;
   volume_level?: number;
   source?: string;

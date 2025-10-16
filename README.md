@@ -511,3 +511,172 @@ resources:
 
 ## License
 This project is under the MIT license.
+
+
+## Changes/Updates Made by Lyfesaver for Emby/Dispatcharr
+
+![Stream metadata pills preview](./docs/images/emby-pills-preview.png)
+
+**Cache-busting note:** When you update this fork’s bundle, bump the version query string in your resource URL (e.g., `/local/lyfes-media-player-bundle.js?v=2025.10.1`) to force browsers to fetch the latest file. If issues persist, hard-refresh the browser and reload resources in Home Assistant (Settings → Dashboards → Resources) or restart HA.
+
+This fork customizes Mini Media Player to work side-by-side with the original card and to better surface Emby/Dispatcharr metadata. Highlights:
+
+- New custom element/tag and safe coexistence
+  - Card element is registered as `lyfes-media-player` to avoid collisions with `mini-media-player`.
+  - All internal components are namespaced (`lmp-*`) and guarded with `if (!customElements.get(...))` before registration to prevent duplicate-definition errors when both cards are loaded.
+  - Internal CSS classes prefixed with `lmp-` to reduce selector clashes.
+
+- Emby stream metadata pills (Line 3)
+  - Added a third information line with compact “pill” badges showing stream details: resolution, video codec, FPS, audio codec, and method (Direct/Transcoded).
+  - Resolution pill uses a light background for legibility and respects theme overrides.
+  - Method pill is color-hinted (direct vs transcoded) for quick at-a-glance status.
+
+- Smarter media info (Line 2)
+  - TV channels: combines channel number/name with current program series when available.
+  - TV shows: renders “Series - SxEy - Title” formatting.
+  - Movies: shows the title only.
+
+- Artwork and background improvements
+  - Optional static `background` image support remains; card can layer a background behind content when configured.
+  - Material artwork mode keeps dynamic foreground/background colors derived from the current artwork.
+
+- Icon image fallbacks
+  - If entity attribute `user_img` is present, it’s used as the icon (avatar-style).
+  - Otherwise, you can provide `icon_image` in config to override the icon with a custom image.
+
+- Layout and styling tweaks
+  - Text area (`.entity__info`) uses flexible sizing to better share space with controls.
+  - Additional pill styles and theme variables to keep appearance consistent across artwork modes.
+
+### New/changed attributes and behaviors
+
+- Emby/Dispatcharr attributes the card reads when available:
+  - `video_resolution` (e.g., `1920x1080`) or `media_resolution`/`video_height` fallback → Resolution pill
+  - `video_codec` → Video codec pill
+  - `video_framerate`/`video_fps`/`frame_rate` → FPS pill (rounded, e.g., `24FPS`)
+  - `audio_codec` → Audio codec pill
+  - `playback_method` or `play_method` → Method pill (`Direct` / `Transcoded`)
+  - TV channel metadata such as `channel_number`, `channel_name`, `program_series`, and `program_image_url`
+
+### Usage
+
+- Keep using the card like the original, but reference this fork’s type when adding it:
+
+  ```yaml
+  type: 'custom:lyfes-media-player'
+  entity: media_player.your_entity
+  # Optional overrides
+  icon_image: /local/path/to/icon.png
+  background: /local/path/to/bg.jpg
+  ```
+
+- The Emby stream pills appear automatically if the corresponding attributes are exposed by your entity.
+
+### Compatibility notes
+
+- This fork is designed to coexist with the original Mini Media Player. If you have both resources loaded, duplicate custom element registration errors should be avoided by the guarded registrations and unique tag names.
+- Most original options and behaviors are preserved; theme variables continue to work as documented above.
+
+### Migration from the original card
+
+If you have an existing dashboard with the original card and want to try this fork without breaking things, start with a minimal replacement in just one card:
+
+```yaml
+# Old
+type: custom:mini-media-player
+entity: media_player.your_entity
+
+# New (this fork)
+type: custom:lyfes-media-player
+entity: media_player.your_entity
+```
+
+- Keep both resources loaded if you want A/B comparison. The fork uses unique tag names so both can be active.
+- Optional: If you rely on a custom icon avatar, add one of the following:
+
+```yaml
+# Use an entity attribute when available (preferred):
+#   Set user_img on your entity so the card automatically picks it up.
+
+# Or override with a static image for this card instance:
+icon_image: /local/path/to/avatar.png
+```
+
+- Optional: Provide a background image specific to the card instance:
+
+```yaml
+background: /local/path/to/bg.jpg
+```
+
+No other changes are required. The Emby-specific pills will appear automatically if your entity exposes the corresponding attributes.
+
+### Emby/Dispatcharr attribute reference
+
+The card reads these attributes when present to render the extra metadata lines and pills.
+
+| Attribute | Purpose | Example |
+|---|---|---|
+| video_resolution | Resolution parsing (primary) | 1920x1080 |
+| media_resolution | Resolution parsing (fallback) | 1080P |
+| video_height | Resolution parsing (fallback) | 1080 |
+| video_codec | Video codec pill | H264 |
+| video_framerate / video_fps / frame_rate | FPS pill (rounded, e.g., 24FPS) | 23.976 |
+| audio_codec | Audio codec pill | AAC |
+| playback_method | Method pill (Direct/Transcoded) | direct, transcoding |
+| play_method | Method pill (fallback) | DirectPlay, Transcode |
+| channel_number | TV channel formatting | 7 |
+| channel_name | TV channel formatting | NBC |
+| program_series | TV channel formatting | Sunday Night Football |
+| program_image_url | Used to refresh artwork for live TV changes | http://.../image.jpg |
+
+### Troubleshooting: running side-by-side with original card
+
+If you're loading both this fork and the original `mini-media-player` in the same dashboard, use the tips below to avoid common pitfalls:
+
+- Separate resources with distinct URLs and versions
+  - Original (example): `/local/mini-media-player-bundle.js?v=1.16.10`
+  - This fork (example): `/local/lyfes-media-player-bundle.js?v=2025.10.0`
+  - Increment the query string (`?v=...`) when you update either file to bust caches.
+
+- Verify resource types
+  - Use `type: module` in Resources. If you get “Custom element doesn't exist,” try `type: js` as a fallback.
+
+- Example Resources (UI or YAML mode)
+
+  YAML mode example (configuration.yaml):
+
+  ```yaml
+  lovelace:
+    resources:
+      - url: /local/mini-media-player-bundle.js?v=1.16.10
+        type: module
+      - url: /local/lyfes-media-player-bundle.js?v=2025.10.0
+        type: module
+  ```
+
+- Example cards side-by-side
+
+  ```yaml
+  # Original
+  type: custom:mini-media-player
+  entity: media_player.living_room
+
+  # Fork
+  type: custom:lyfes-media-player
+  entity: media_player.living_room
+  ```
+
+- Clear caches after updates
+  - Browser: hard refresh or clear cache.
+  - Home Assistant: Reload resources from Settings → Dashboards → Resources, or restart HA.
+
+- Duplicate custom element errors
+  - This fork guards `customElements.define(...)` and uses unique tag names (`lyfes-media-player`, `lmp-*`). If you still see duplicate-definition errors, another custom card may be shipping the same HA UI elements. Remove duplicates or ensure only one copy of shared helper elements (like `ha-icon-button`) is defined per page.
+
+- Resource ordering
+  - Generally order doesn't matter, but if you inlined custom scripts or use theme overrides that depend on one or the other, list the original first, then the fork.
+
+- Last resort sanity check
+  - Temporarily disable one resource at a time to isolate a misbehaving reference.
+  - Check the browser console for 404s (missing files) or CORS blocks; verify the files exist under `/config/www` and paths start with `/local/...`.
+

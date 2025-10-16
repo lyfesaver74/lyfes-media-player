@@ -69,19 +69,19 @@ class MiniMediaPlayerPowerstrip extends LitElement {
     return html`
       ${this.idle ? this.renderIdleView : ''}
       ${this.hasControls
-        ? html` <mmp-media-controls .player=${this.player} .config=${this.config}> </mmp-media-controls> `
+  ? html` <lmp-media-controls .player=${this.player} .config=${this.config}> </lmp-media-controls> `
         : ''}
       ${this.hasSource
-        ? html` <mmp-source-menu .player=${this.player} .icon=${this.sourceSize} ?full=${this.config.source === 'full'}>
-          </mmp-source-menu>`
+  ? html` <lmp-source-menu .player=${this.player} .icon=${this.sourceSize} ?full=${this.config.source === 'full'}>
+          </lmp-source-menu>`
         : ''}
       ${this.hasSoundMode
-        ? html` <mmp-sound-menu
+  ? html` <lmp-sound-menu
             .player=${this.player}
             .icon=${this.soundSize}
             ?full=${this.config.sound_mode === 'full'}
           >
-          </mmp-sound-menu>`
+          </lmp-sound-menu>`
         : ''}
       ${this.showGroupButton
         ? html` <ha-icon-button
@@ -131,10 +131,10 @@ class MiniMediaPlayerPowerstrip extends LitElement {
           line-height: var(--mmp-unit);
           max-height: var(--mmp-unit);
         }
-        :host([flow]) mmp-media-controls {
+        :host([flow]) lmp-media-controls {
           max-width: unset;
         }
-        mmp-media-controls {
+        lmp-media-controls {
           max-width: calc(var(--mmp-unit) * 5);
           line-height: initial;
           justify-content: flex-end;
@@ -150,4 +150,6 @@ class MiniMediaPlayerPowerstrip extends LitElement {
   }
 }
 
-customElements.define('mmp-powerstrip', MiniMediaPlayerPowerstrip);
+if (!customElements.get('lmp-powerstrip')) {
+  customElements.define('lmp-powerstrip', MiniMediaPlayerPowerstrip);
+}

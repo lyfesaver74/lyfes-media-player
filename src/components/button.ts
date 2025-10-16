@@ -1,6 +1,6 @@
 import { LitElement, html, css, customElement, CSSResult } from 'lit-element';
 
-@customElement('mmp-button')
+@customElement('lmp-button')
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class MiniMediaPlayerButton extends LitElement {
   render() {

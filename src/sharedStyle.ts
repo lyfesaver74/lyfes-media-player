@@ -26,8 +26,7 @@ const sharedStyle = css`
   ha-icon-button[inactive] {
     opacity: 0.5;
   }
-  ha-icon-button ha-icon,
-  mmp-icon-button ha-icon {
+  ha-icon-button ha-icon {
     display: flex;
   }
 `;

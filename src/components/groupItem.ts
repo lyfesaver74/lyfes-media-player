@@ -13,7 +13,7 @@ export interface GroupChangeEvent extends CustomEvent {
   };
 }
 
-@customElement('mmp-group-item')
+@customElement('lmp-group-item')
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 class MiniMediaPlayerGroupItem extends LitElement {
   @property({ attribute: false }) public hass!: HomeAssistant;
@@ -24,14 +24,14 @@ class MiniMediaPlayerGroupItem extends LitElement {
 
   render() {
     return html`
-      <mmp-checkbox
+      <lmp-checkbox
         .checked=${this.checked}
         .disabled=${this.disabled}
         @change="${(e: MouseEvent) => e.stopPropagation()}"
         @click="${this.handleClick}"
       >
         ${this.item.name} ${this.master ? html`<span class="master">(${t(this.hass, 'label.master')})</span>` : ''}
-      </mmp-checkbox>
+  </lmp-checkbox>
     `;
   }
 

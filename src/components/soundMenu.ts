@@ -11,7 +11,7 @@ interface DropdownItem {
 
 type ChangeEvent = CustomEvent<DropdownItem>;
 
-@customElement('mmp-sound-menu')
+@customElement('lmp-sound-menu')
 export class MiniMediaPlayerSoundMenu extends LitElement {
   @property({ attribute: false }) public player!: MediaPlayerObject;
 
@@ -33,13 +33,13 @@ export class MiniMediaPlayerSoundMenu extends LitElement {
 
   render(): TemplateResult {
     return html`
-      <mmp-dropdown
+  <lmp-dropdown
         @change=${this.handleChange}
         .items=${this.alternatives}
         .label=${this.mode}
         .selected=${this.selected || this.mode}
         .icon=${this.icon}
-      ></mmp-dropdown>
+  ></lmp-dropdown>
     `;
   }
 

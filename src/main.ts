@@ -36,9 +36,9 @@ import { HomeAssistant, MediaPlayerEntity } from './types';
 import { Part } from 'lit-html';
 import { MiniMediaPlayerBaseConfiguration, MiniMediaPlayerConfiguration } from './config/types';
 
-@customElement('mini-media-player')
+@customElement('lyfes-media-player')
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-class MiniMediaPlayer extends LitElement {
+class LyfesMediaPlayer extends LitElement {
   @property({ attribute: false })
   set hass(hass) {
     if (!hass) return;
@@ -70,6 +70,7 @@ class MiniMediaPlayer extends LitElement {
   @state() private thumbnail = '';
   @state() private prevThumbnail = '';
   @state() private edit = false;
+  @state() private _lastProgramImage?: string;
   @state() private rtl = false;
   @state() private cardHeight = 0;
   @state() private foregroundColor = '';
@@ -89,7 +90,7 @@ class MiniMediaPlayer extends LitElement {
 
   public static async getConfigElement() {
     await import('./editor');
-    return document.createElement('mini-media-player-editor');
+    return document.createElement('lyfes-media-player-editor');
   }
 
   static get styles(): CSSResultGroup {
@@ -168,12 +169,12 @@ class MiniMediaPlayer extends LitElement {
         artwork=${config.artwork}
         content=${this.player.content}
       >
-        <div class="mmp__bg">${this.renderBackground()} ${this.renderArtwork()} ${this.renderGradient()}</div>
-        <div class="mmp-player">
-          <div class="mmp-player__core flex" ?inactive=${this.player.idle}>
+        <div class="lmp__bg">${this.renderBackground()} ${this.renderArtwork()} ${this.renderGradient()}</div>
+        <div class="lmp-player">
+          <div class="lmp-player__core flex" ?inactive=${this.player.idle}>
             ${this.renderIcon()}
-            <div class="entity__info">${this.renderEntityName()} ${this.renderMediaInfo()}</div>
-            <mmp-powerstrip
+            <div class="entity__info">${this.renderEntityName()} ${this.renderCustomMediaInfo()}</div>
+            <lmp-powerstrip
               @toggleGroupList=${this.toggleGroupList}
               .hass=${this.hass}
               .player=${this.player}
@@ -182,37 +183,37 @@ class MiniMediaPlayer extends LitElement {
               .idle=${this.idle}
               ?flow=${config.flow}
             >
-            </mmp-powerstrip>
+            </lmp-powerstrip>
           </div>
-          <div class="mmp-player__adds">
+          <div class="lmp-player__adds">
             ${!config.collapse && this.player.isActive
               ? html`
-                  <mmp-media-controls .player=${this.player} .config=${config} .break=${this.break}>
-                  </mmp-media-controls>
+                  <lmp-media-controls .player=${this.player} .config=${config} .break=${this.break}>
+                  </lmp-media-controls>
                 `
               : ''}
-            <mmp-shortcuts .player=${this.player} .shortcuts=${config.shortcuts}> </mmp-shortcuts>
+            <lmp-shortcuts .player=${this.player} .shortcuts=${config.shortcuts}> </lmp-shortcuts>
             ${config.tts
-              ? html` <mmp-tts .config=${config.tts} .hass=${this.hass} .player=${this.player}> </mmp-tts> `
+              ? html` <lmp-tts .config=${config.tts} .hass=${this.hass} .player=${this.player}> </lmp-tts> `
               : ''}
-            <mmp-group-list
+            <lmp-group-list
               .hass=${this.hass}
               .visible=${this.edit}
               .entities=${config.speaker_group.entities}
               .player=${this.groupMgmtPlayer ? this.groupMgmtPlayer : this.player}
               >>
-            </mmp-group-list>
+            </lmp-group-list>
           </div>
         </div>
-        <div class="mmp__container">
+         <div class="lmp__container">
           ${this.player.isActive && this.player.hasProgress
             ? html`
-                <mmp-progress
+                <lmp-progress
                   .player=${this.player}
                   .showTime=${!this.config.hide.runtime}
                   .showRemainingTime=${!this.config.hide.runtime_remaining}
                 >
-                </mmp-progress>
+                </lmp-progress>
               `
             : ''}
         </div>
@@ -293,7 +294,15 @@ class MiniMediaPlayer extends LitElement {
       </div>`;
     }
 
-    if (this.config.icon_image != undefined){
+      // Check for user_img attribute first
+      if (this.player._attr.user_img) {
+        return html` <div class="entity__icon">
+          <img src="${this.player._attr.user_img}" style="height: 100%; border-radius: 50%;" />
+        </div>`;
+      }
+
+      // Fall back to configured icon_image if present
+      if (this.config.icon_image != undefined) {
       return html` <div class="entity__icon">
         <img src="${this.config.icon_image}" height="100%" />
       </div>`;
@@ -316,25 +325,39 @@ class MiniMediaPlayer extends LitElement {
     return html` <div class="entity__info__name">${this.name} ${this.speakerCount()}</div>`;
   }
 
-  renderMediaInfo(): TemplateResult | undefined {
+  // New media info rendering with 3 lines
+  renderCustomMediaInfo(): TemplateResult | undefined {
     if (this.config.hide.info) return;
-    const items = this.player.mediaInfo;
+    // Line 1 is the entity name already rendered above.
+    const line2 = this.player.secondaryLine;
+    const parts = this.player.streamParts;
 
     return html` <div
       class="entity__info__media"
-      ?short=${this.config.info === 'short' || !this.player.isActive}
+      ?short=${this.config.info === 'short'}
       ?short-scroll=${this.config.info === 'scroll'}
+      ?compact=${this.config.collapse && this.config.info !== 'scroll'}
       ?scroll=${this.overflow}
       style="animation-duration: ${this.overflow}s;"
     >
-      ${this.config.info === 'scroll'
-        ? html` <div>
-            <div class="marquee">
-              ${items.map((i) => html`<span class=${`attr__${i.attr}`}>${i.prefix + i.text}</span>`)}
-            </div>
+  ${line2 ? html`<div class="lmp-line-2">${line2}</div>` : ''}
+      ${parts && parts.length
+          ? html`<div class="lmp-line-3">
+            ${parts.map((p) => {
+              const methodClass =
+                p.kind === 'method'
+                  ? p.text?.toLowerCase() === 'direct'
+                    ? ' lmp-pill-method--direct'
+                    : ' lmp-pill-method--transcoded'
+                  : '';
+              const resolutionStyle =
+                p.kind === 'resolution'
+                  ? 'background: var(--mini-media-player-res-bg, color-mix(in srgb, var(--mmp-media-cover-info-color, var(--mmp-accent-color, #888)) 35%, #ffffff)); color: var(--mini-media-player-res-fg, #111111); border-color: var(--mini-media-player-res-border, var(--mmp-accent-color));'
+                  : '';
+              return html`<span class="lmp-pill lmp-pill-${p.kind}${methodClass}" style="${resolutionStyle}">${p.text}</span>`;
+            })}
           </div>`
         : ''}
-      ${items.map((i) => html`<span class=${`attr__${i.attr}`}>${i.prefix + i.text}</span>`)}
     </div>`;
   }
 
@@ -350,6 +373,14 @@ class MiniMediaPlayer extends LitElement {
     const { scale } = this.config;
     return styleMap({
       ...(scale && { '--mmp-unit': `${40 * scale}px` }),
+      // Reserve space on the right of the text based on artwork mode and measured height
+      ...(this.player.hasArtwork && {
+        '--mmp-artwork-reserve': this.config.artwork === 'material'
+          ? `clamp(24px, 6%, ${Math.max(72, Math.floor(this.cardHeight * 0.18))}px)`
+          : this.config.artwork && this.config.artwork.includes('cover')
+            ? `clamp(12px, 4%, ${Math.max(56, Math.floor(this.cardHeight * 0.14))}px)`
+            : `clamp(16px, 5%, ${Math.max(64, Math.floor(this.cardHeight * 0.16))}px)`
+      }),
       ...(this.foregroundColor &&
         this.player.isActive && {
           '--mmp-text-color': this.foregroundColor,
@@ -363,10 +394,26 @@ class MiniMediaPlayer extends LitElement {
     });
   }
 
+
   async computeArtwork(): Promise<void> {
     const { picture, hasArtwork } = this.player;
-    if (hasArtwork && picture !== this.picture) {
+    // Force artwork update when program image changes for TV channels
+    const shouldUpdateArtwork = hasArtwork && (
+      picture !== this.picture || 
+      (this.player._attr.media_content_type === 'tvchannel' && this.player._attr.program_image_url !== this._lastProgramImage)
+    );
+
+    if (shouldUpdateArtwork) {
+      console.log('Updating artwork:', {
+        current: picture,
+        previous: this.picture,
+        program: this.player._attr.program_image_url,
+        lastProgram: this._lastProgramImage
+      });
+      
       this.picture = picture;
+      this._lastProgramImage = this.player._attr.program_image_url;
+      
       const artwork = await this.player.fetchArtwork();
       if (this.thumbnail) {
         this.prevThumbnail = this.thumbnail;
@@ -458,8 +505,8 @@ class MiniMediaPlayer extends LitElement {
 (window as any).customCards = (window as any).customCards || [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).customCards.push({
-  type: 'mini-media-player',
-  name: 'Mini Media Player',
+  type: 'lyfes-media-player',
+  name: 'Lyfes Media Player',
   preview: false,
-  description: 'A minimalistic yet customizable media player card',
+  description: 'A customizable media player card',
 });

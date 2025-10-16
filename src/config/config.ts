@@ -50,7 +50,8 @@ export const generateConfig = (config: MiniMediaPlayerBaseConfiguration): MiniMe
   };
 
   conf.collapse = conf.hide.controls || conf.hide.volume;
-  conf.info = conf.collapse && conf.info !== 'scroll' ? 'short' : conf.info;
+  // Do not force 'short' info when collapsed; allow third line to show even when controls/volume are hidden
+  conf.info = conf.info;
   conf.flow = conf.hide.icon && conf.hide.name && conf.hide.info;
 
   return conf;

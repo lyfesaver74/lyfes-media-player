@@ -83,6 +83,11 @@ export default class MediaPlayerObject {
     return this._attr.media_content_type || 'none';
   }
 
+  // Display name prefers custom_name when present
+  get name(): string {
+    return this._attr.custom_name || this._attr.friendly_name || '';
+  }
+
   get mediaDuration(): string | number | Date {
     return this._attr.media_duration || 0;
   }
@@ -91,12 +96,115 @@ export default class MediaPlayerObject {
     return this._attr.media_position_updated_at || 0;
   }
 
+  // Build the second info line based on content type
+  get secondaryLine(): string {
+    const type = (this._attr.media_content_type || '').toLowerCase();
+    if (type === 'tvchannel') {
+      const channelNum = this._attr.channel_number ?? '';
+      const channelName = this._attr.channel_name ?? '';
+      const programSeries = this._attr.program_series ?? '';
+      const left = [channelNum, channelName].filter(Boolean).join(' ');
+      const right = programSeries ? `: ${programSeries}` : '';
+      return `${left}${right}`.trim();
+    }
+
+    if (type === 'tvshow' || type === 'tv-series' || type === 'episode') {
+      const series = this._attr.media_series_title ?? '';
+      const season = this._attr.media_season != null ? `S${this._attr.media_season}` : '';
+      const episode = this._attr.media_episode != null ? `E${this._attr.media_episode}` : '';
+      const title = this._attr.media_title ?? '';
+      const se = [season, episode].filter(Boolean).join('');
+      return [series, se, title].filter(Boolean).join(' - ');
+    }
+
+    if (type === 'movie' || type === 'film') {
+      return this._attr.media_title ?? '';
+    }
+
+    return this._attr.media_title || this._attr.media_series_title || '';
+  }
+
   get position(): number {
     return this._attr.media_position || 0;
   }
 
-  get name(): string {
-    return this._attr.friendly_name || '';
+  // Structured parts for pill rendering on line 3
+  get streamParts(): { kind: 'vcodec' | 'resolution' | 'fps' | 'acodec' | 'method'; text: string }[] {
+    const out: { kind: 'vcodec' | 'resolution' | 'fps' | 'acodec' | 'method'; text: string }[] = [];
+
+  // Resolution - parse from video_resolution (e.g., "1920x1080")
+    let resolution = '';
+    const videoRes = this._attr.video_resolution || '';
+    if (videoRes) {
+      const match = String(videoRes).match(/(\d+)x(\d+)/i);
+      if (match) {
+        const height = parseInt(match[2]);
+        if (height >= 2160) resolution = '4K';
+        else if (height >= 1440) resolution = '1440P';
+        else if (height >= 1080) resolution = '1080P';
+        else if (height >= 720) resolution = '720P';
+        else resolution = `${height}P`;
+      }
+    }
+    // Fallback to explicit media_resolution or video_height
+    if (!resolution) {
+      const explicitRes = (this._attr.media_resolution || '').toString().toUpperCase();
+      if (explicitRes) {
+        resolution = explicitRes;
+      } else {
+        const h = Number(this._attr.video_height || 0);
+        if (h >= 2160) resolution = '4K';
+        else if (h >= 1440) resolution = '1440P';
+        else if (h >= 1080) resolution = '1080P';
+        else if (h >= 720) resolution = '720P';
+        else if (h > 0) resolution = `${h}P`;
+      }
+    }
+  if (resolution) out.push({ kind: 'resolution', text: resolution });
+
+  // Video codec (after resolution)
+  const vcodec = (this._attr.video_codec || '').toString().toUpperCase();
+  if (vcodec) out.push({ kind: 'vcodec', text: vcodec });
+
+    // FPS - prefer video_framerate; round to nearest integer and append 'FPS' without space
+    const fpsNum = Number(this._attr.video_framerate || this._attr.video_fps || this._attr.frame_rate || 0);
+    if (fpsNum > 0) {
+      const rounded = Math.round(fpsNum);
+      const fpsText = `${rounded}FPS`;
+      out.push({ kind: 'fps', text: fpsText });
+    }
+
+    // Audio codec
+    const acodec = (this._attr.audio_codec || '').toString().toUpperCase();
+    if (acodec) out.push({ kind: 'acodec', text: acodec });
+
+    // Method
+    const method = this.computeTranscodingLabel();
+    if (method) out.push({ kind: 'method', text: method });
+
+    return out;
+  }
+
+  // Build the third info line with stream details (string form)
+  get streamLine(): string {
+    const parts = this.streamParts.map((p) => p.text);
+    return parts.join(' ');
+  }
+
+  private computeTranscodingLabel(): string {
+    // Use Emby's playback_method attribute
+    const playbackMethod = (this._attr.playback_method || '').toString().toLowerCase();
+    
+    if (playbackMethod === 'transcoding') return 'Transcoded';
+    if (playbackMethod === 'direct') return 'Direct';
+    
+    // Fallback to other possible methods for compatibility
+    const method = (this._attr.play_method || '').toString().toLowerCase();
+    if (method.includes('transcode')) return 'Transcoded';
+    if (method.includes('direct')) return 'Direct';
+    
+    // If no clear indication, omit the label
+    return '';
   }
 
   get groupCount(): number {
@@ -155,7 +263,11 @@ export default class MediaPlayerObject {
   }
 
   get picture(): string | undefined {
-    return this._attr.entity_picture_local || this._attr.entity_picture;
+      // Always prefer program_image_url if present
+      if (this._attr.program_image_url) {
+        return this._attr.program_image_url;
+      }
+      return this._attr.entity_picture_local || this._attr.entity_picture;
   }
 
   get hasArtwork(): boolean {
@@ -241,15 +353,34 @@ export default class MediaPlayerObject {
   }
 
   async fetchArtwork(): Promise<string | false> {
-    const url = this._attr.entity_picture_local ? this.hass.hassUrl(this.picture) : this.picture;
-
     try {
+      // Determine which URL to use
+      let url: string;
+      
+      // Always prefer program_image_url for TV channels if available
+      if (this._attr.program_image_url && this._attr.media_content_type === 'tvchannel') {
+        url = this._attr.program_image_url;
+        console.log('Using TV program image:', url);
+      } else if (this._attr.entity_picture_local) {
+        url = this.hass.hassUrl(this._attr.entity_picture_local);
+        console.log('Using local entity picture:', url);
+      } else if (this._attr.entity_picture) {
+        url = this._attr.entity_picture;
+        console.log('Using entity picture:', url);
+      } else {
+        console.log('No image URL available');
+        return false;
+      }
+
       const res = await fetch(new Request(url));
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      
       const buffer = await res.arrayBuffer();
       const image64 = arrayBufferToBase64(buffer);
       const imageType = res.headers.get('Content-Type') || 'image/jpeg';
       return `url(data:${imageType};base64,${image64})`;
     } catch (error) {
+      console.error('Error fetching artwork:', error);
       return false;
     }
   }

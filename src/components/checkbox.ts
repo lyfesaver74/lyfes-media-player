@@ -1,7 +1,5 @@
-import { LitElement, html, css, customElement, CSSResult, property } from 'lit-element';
+import { LitElement, html, css, CSSResult, property } from 'lit-element';
 
-@customElement('mmp-checkbox')
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class MiniMediaPlayerCheckbox extends LitElement {
   @property({ attribute: false }) public checked!: boolean;
   @property({ attribute: false }) public disabled!: boolean;
@@ -32,4 +30,9 @@ class MiniMediaPlayerCheckbox extends LitElement {
       }
     `;
   }
+}
+
+const CHECKBOX_TAG = 'lmp-checkbox';
+if (!customElements.get(CHECKBOX_TAG)) {
+  customElements.define(CHECKBOX_TAG, MiniMediaPlayerCheckbox);
 }

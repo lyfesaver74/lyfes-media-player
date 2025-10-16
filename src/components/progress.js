@@ -26,12 +26,12 @@ class MiniMediaPlayerProgress extends LitElement {
     }
   }
 
-  get duration() {
-    return this.player.mediaDuration;
-  }
-
   get player() {
     return this._player;
+  }
+
+  get duration() {
+    return this.player.mediaDuration;
   }
 
   get hasProgress() {
@@ -39,7 +39,7 @@ class MiniMediaPlayerProgress extends LitElement {
   }
 
   get width() {
-    return this.shadowRoot.querySelector('.mmp-progress').offsetWidth;
+    return this.shadowRoot.querySelector('.lmp-progress').offsetWidth;
   }
 
   get offset() {
@@ -55,7 +55,7 @@ class MiniMediaPlayerProgress extends LitElement {
 
   render() {
     return html`
-      <div class='mmp-progress'
+  <div class='lmp-progress'
         @touchstart=${this.initSeek}
         @touchend=${this.handleSeek}
         @mousedown=${this.initSeek}
@@ -64,11 +64,11 @@ class MiniMediaPlayerProgress extends LitElement {
         @click=${e => e.stopPropagation()}
         ?paused=${!this.player.isPlaying}>
         ${this.showTime ? html`
-          <div class='mmp-progress__duration'>
+          <div class='lmp-progress__duration'>
             <span>${convertProgress(this.seekProgress || this.progress)}</span>
             <div>
               ${this.showTime ? html`
-                <span class='mmp-progress__duration__remaining'>
+                <span class='lmp-progress__duration__remaining'>
                   -${(convertProgress(this.duration - (this.seekProgress || this.progress)))} |
                 </span>
               ` : ''}
@@ -144,14 +144,14 @@ class MiniMediaPlayerProgress extends LitElement {
 
   static get styles() {
     return css`
-      .mmp-progress {
+  .lmp-progress {
         cursor: pointer;
         left: 0; right: 0; bottom: 0;
         position: absolute;
         pointer-events: auto;
         min-height: calc(var(--mmp-progress-height) + 10px);
       }
-      .mmp-progress:before {
+  .lmp-progress:before {
         content: '';
         position: absolute;
         left: 0;
@@ -160,7 +160,7 @@ class MiniMediaPlayerProgress extends LitElement {
         height: var(--mmp-progress-height);
         background-color: rgba(100,100,100,.15);
       }
-      .mmp-progress__duration {
+  .lmp-progress__duration {
         left: calc(var(--ha-card-border-radius, 4px) / 2);
         right: calc(var(--ha-card-border-radius, 4px) / 2);
         bottom: calc(var(--mmp-progress-height) + 6px);
@@ -171,7 +171,7 @@ class MiniMediaPlayerProgress extends LitElement {
         padding: 0 6px;
         z-index: 2
       }
-      .mmp-progress__duration__remaining {
+  .lmp-progress__duration__remaining {
         opacity: .5;
       }
       .progress-bar {
@@ -187,11 +187,13 @@ class MiniMediaPlayerProgress extends LitElement {
         transition: height .15s ease-out;
         height: calc(var(--mmp-progress-height) + 4px);
       }
-      .mmp-progress[paused] .progress-bar {
+  .lmp-progress[paused] .progress-bar {
         background-color: var(--disabled-text-color, rgba(150,150,150,.5));
       }
     `;
   }
 }
 
-customElements.define('mmp-progress', MiniMediaPlayerProgress);
+if (!customElements.get('lmp-progress')) {
+  customElements.define('lmp-progress', MiniMediaPlayerProgress);
+}
