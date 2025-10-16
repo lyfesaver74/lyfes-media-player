@@ -515,7 +515,7 @@ This project is under the MIT license.
 
 ## Changes/Updates Made by Lyfesaver for Emby/Dispatcharr
 
-![Stream metadata pills preview](./docs/images/emby-pills-preview.png)
+![Stream metadata pills preview](https://emby.media/community/uploads/monthly_2025_10/image.png.338281398b8c109a9b1cc4e26379958d.png)
 
 **Cache-busting note:** When you update this fork’s bundle, bump the version query string in your resource URL (e.g., `/local/lyfes-media-player-bundle.js?v=2025.10.1`) to force browsers to fetch the latest file. If issues persist, hard-refresh the browser and reload resources in Home Assistant (Settings → Dashboards → Resources) or restart HA.
 
@@ -679,4 +679,5 @@ If you're loading both this fork and the original `mini-media-player` in the sam
 - Last resort sanity check
   - Temporarily disable one resource at a time to isolate a misbehaving reference.
   - Check the browser console for 404s (missing files) or CORS blocks; verify the files exist under `/config/www` and paths start with `/local/...`.
+
 
